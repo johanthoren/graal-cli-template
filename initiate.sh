@@ -29,6 +29,7 @@ mv src/xyz/thoren src/xyz/${DOMAIN}
 mv test/xyz/thoren test/xyz/${DOMAIN}
 mv src/xyz src/${TLD}
 mv test/xyz test/${TLD}
+sed -E '1 s/[0-9]+\.[0-9]+\.[0-9]+-[[:alpha:]]+/0.1.0-SNAPSHOT/' project.clj
 find . -type f -exec sed -i '' "s/xyz\.thoren/${TLD}\.${DOMAIN}/g" {} +
 find . -type f -exec sed -i '' "s/graal-cli-template/${ARTIFACT}/g" {} +
 find .github -type f -exec sed -i '' "s/xyz\/thoren/${TLD}\/${DOMAIN}/g" {} +
