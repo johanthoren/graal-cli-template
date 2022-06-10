@@ -1,0 +1,18 @@
+meta:
+  description: FIXME: Description
+  vendor: Johan Thorén <johan@thoren.xyz>
+  maintainer: Johan Thorén <johan@thoren.xyz>
+  license: ISC
+files:
+  "/usr/bin/graal-cli-template":
+    file: graal-cli-template-linux-x86_64
+    mode: "0755"
+    user: "root"
+  "/usr/share/doc/graal-cli-template/README.md":
+    file: README.md
+    mode: "0644"
+    user: "root"
+  "/usr/share/licenses/graal-cli-template/LICENSE":
+    file: LICENSE
+    mode: "0644"
+    user: "root"

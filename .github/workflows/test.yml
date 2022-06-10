@@ -1,0 +1,290 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: DeLaGuardo/setup-clj-kondo@master
+        with:
+          version: '2021.08.06'
+
+      - uses: actions/checkout@v2
+
+      - name: clj-kondo
+        run: clj-kondo --lint src
+
+      - name: Install lein deps
+        run: lein deps
+
+      - name: Lein Kibit
+        run: lein kibit
+
+  lein_test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: lein deps
+
+    - name: Run tests
+      run: lein test
+
+  build_jar:
+    name: Build JAR
+
+    needs:
+      - lint
+      - lein_test
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          - all.jar
+
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - name: Lein
+        run: lein uberjar
+
+      - name: Move and rename JAR
+        run: mv target/uberjar/graal-cli-template-*-standalone.jar graal-cli-template-${{ matrix.target }}
+
+      - name: Print the current state of the directory
+        run: ls -alh
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v2
+        with:
+          name: graal-cli-template-${{ matrix.target }}
+          path: graal-cli-template-${{ matrix.target }}
+
+
+  build_linux:
+    name: Build Linux
+
+    needs:
+      - lint
+      - lein_test
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          - linux-x86_64
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Make
+        run: make
+
+      - name: Move and rename binary
+        run: mv target/graal-cli-template graal-cli-template-${{ matrix.target }}
+
+      - name: Print the current state of the directory
+        run: ls -alh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: graal-cli-template-${{ matrix.target }}
+          path: graal-cli-template-${{ matrix.target }}
+
+  build_macos:
+    name: Build macOS
+
+    needs:
+      - build_jar
+
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          - apple-darwin-x86_64
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v2.0.5
+        with:
+          name: graal-cli-template-all.jar
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          version: '22.1.0'
+          java-version: '11'
+          components: 'native-image'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print the current state of the directory
+        run: ls -alh
+
+      - name: Build Native Image
+        run: |
+          native-image \
+          --no-fallback \
+          --report-unsupported-elements-at-runtime \
+          -H:+ReportExceptionStackTraces \
+          --allow-incomplete-classpath \
+          -jar graal-cli-template-all.jar \
+          -H:Name=graal-cli-template-${{ matrix.target }}
+
+      - name: Print the current state of the directory
+        run: ls -alh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: graal-cli-template-${{ matrix.target }}
+          path: graal-cli-template-${{ matrix.target }}
+
+  build_windows:
+    name: Build Windows
+
+    needs:
+      - build_jar
+
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          - windows-x86_64
+
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v2.0.5
+        with:
+          name: graal-cli-template-all.jar
+
+      - name: Add developer command prompt for Microsoft Visual C++
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          version: '22.1.0'
+          java-version: '11'
+          components: 'native-image'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print the current state of the directory
+        shell: powershell
+        run: dir
+
+      - name: Build Native Image
+        shell: cmd
+        run: native-image --no-fallback --report-unsupported-elements-at-runtime -H:+ReportExceptionStackTraces --allow-incomplete-classpath -jar graal-cli-template-all.jar -H:Name=graal-cli-template-${{ matrix.target }}
+
+      - name: Print the current state of the directory
+        shell: powershell
+        run: dir
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: graal-cli-template-${{ matrix.target }}.exe
+          path: graal-cli-template-${{ matrix.target }}.exe
+
+  integration_tests:
+    name: Run integration tests
+
+    needs:
+      - build_linux
+      - build_macos
+      - build_windows
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+          - os: macos-latest
+            target: apple-darwin-x86_64
+          - os: windows-latest
+            target: windows-x86_64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download bats
+        if: "!contains(matrix.target, 'windows') && success()"
+        run: |
+          git submodule add https://github.com/bats-core/bats-core.git test/bats
+          git submodule add https://github.com/bats-core/bats-support.git test/test_helper/bats-support
+          git submodule add https://github.com/bats-core/bats-assert.git test/test_helper/bats-assert
+
+      - name: Display the contents of the test dir
+        if: "!contains(matrix.target, 'windows')"
+        run: ls -Ral test/*
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: graal-cli-template-${{ matrix.target }}
+
+      - name: Make artifact executable (NON-WINDOWS)
+        if: "!contains(matrix.target, 'windows')"
+        run: chmod +x graal-cli-template-${{ matrix.target }}
+
+      - name: List directory (NON-WINDOWS)
+        if: "!contains(matrix.target, 'windows')"
+        run: ls -alh
+
+      - name: List directory (WINDOWS)
+        if: "contains(matrix.target, 'windows')"
+        run: dir
+
+      - name: Rename binary (NON-WINDOWS)
+        if: "!contains(matrix.target, 'windows')"
+        run: mv graal-cli-template-${{ matrix.target }} graal-cli-template
+
+      - name: Rename binary (WINDOWS)
+        if: "contains(matrix.target, 'windows')"
+        run: mv graal-cli-template-${{ matrix.target }} graal-cli-template.exe
+
+      - name: Run bats tests (NON-WINDOWS)
+        if: "!contains(matrix.target, 'windows')"
+        shell: bash
+        run: ./test/bats/bin/bats -r ./test/xyz/thoren/
+
+      - name: Run the executable with -h (WINDOWS)
+        if: "contains(matrix.target, 'windows')"
+        shell: bash
+        run: ./graal-cli-template.exe -h
+
+      - name: Run the executable with -v (WINDOWS)
+        if: "contains(matrix.target, 'windows')"
+        shell: bash
+        run: ./graal-cli-template.exe -v
