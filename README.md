@@ -2,12 +2,12 @@
 
 Use this template to quickly get up and running with a new Graal VM native image Clojure app.
 
-The `initiate.sh` script will move some files and replace some lines to quickly rename your project, but it's only tested on my local Mac, so use it at your own peril.
+The `initiate.clj` babashka script will move some files and replace some lines to quickly rename your project, but it's only tested on my local Mac, so use it at your own peril.
 
 ## Example
 
 ``` sh
-$ ./initiate.sh xyz.thoren graal-cli-template
+$ bb initiate.clj xyz.thoren graal-cli-template
 ```
 
 ## License
