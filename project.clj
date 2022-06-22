@@ -1,4 +1,4 @@
-(defproject xyz.thoren/graal-cli-template "0.1.4-SNAPSHOT"
+(defproject xyz.thoren/graal-cli-template "0.1.4"
   :description "FIXME: Description"
   :url "https://github.com/johanthoren/graal-cli-template"
   :license {:name "ISC"
