@@ -20,18 +20,28 @@
 
 (fs/move (str (fs/cwd) "/src/xyz/thoren/graal_cli_template.clj")
          (str (fs/cwd) "/src/xyz/thoren/" artifact-name ".clj"))
-(fs/move (str (fs/cwd) "/src/xyz/thoren")
-         (str (fs/cwd) "/src/xyz/" domain))
-(fs/move (str (fs/cwd) "/src/xyz")
-         (str (fs/cwd) "/src/" tld))
+
+(when-not (= "thoren" domain)
+  (fs/move (str (fs/cwd) "/src/xyz/thoren")
+           (str (fs/cwd) "/src/xyz/" domain)))
+
+(when-not (= "xyz" tld)
+  (fs/move (str (fs/cwd) "/src/xyz")
+           (str (fs/cwd) "/src/" tld)))
+
 (fs/move (str (fs/cwd) "/test/xyz/thoren/graal_cli_template_test.clj")
          (str (fs/cwd) "/test/xyz/thoren/" artifact-name "_test.clj"))
+
 (fs/move (str (fs/cwd) "/test/xyz/thoren/graal_cli_template_test.bats")
          (str (fs/cwd) "/test/xyz/thoren/" artifact-name "_test.bats"))
-(fs/move (str (fs/cwd) "/test/xyz/thoren")
-         (str (fs/cwd) "/test/xyz/" domain))
-(fs/move (str (fs/cwd) "/test/xyz")
-         (str (fs/cwd) "/test/" tld))
+
+(when-not (= "thoren" domain)
+  (fs/move (str (fs/cwd) "/test/xyz/thoren")
+           (str (fs/cwd) "/test/xyz/" domain)))
+
+(when-not (= "xyz" tld)
+  (fs/move (str (fs/cwd) "/test/xyz")
+           (str (fs/cwd) "/test/" tld)))
 
 (defn files [d]
   (remove fs/directory? (fs/glob "." (str d "/**") {:hidden true})))
