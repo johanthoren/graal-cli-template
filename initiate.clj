@@ -1,4 +1,7 @@
 #!/usr/bin/env bb
+(require '[babashka.fs :as fs]
+         '[clojure.string :as str])
+
 (def group-id (first *command-line-args*))
 (def tld (first (str/split group-id #"\.")))
 (def domain (second (str/split group-id #"\.")))
